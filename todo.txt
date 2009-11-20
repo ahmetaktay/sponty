@@ -1,0 +1,7 @@
+CHANGED: Fix not counting non target trials
+TODO: Fix this line: 'history.contrast(nTrials) = mean(calibrationHistory.contrast(end-5:end));', so that only takes the mean contrast of trials with target
+TODO: Change 'sound(params.beep)' to use PsychPortAudio stuff and record duration of sound
+TODO: Check that EEG signals being sent to MIP match with matlab
+TODO: Try switching the stimulus to be a circle instead of an annulus, check with Greg and Marvin
+TODO: Confirm that it is necessary to adjust the contrast during a trial
+
