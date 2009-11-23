@@ -1,11 +1,7 @@
-    function params=getParams(basicLoad)
+    function params=getParams
     
     % function params=spontyParams
     % Creates parameters and initializes the display for visual perception experiment
-    
-    if nargin < 1
-        basicLoad = false;
-    end
     
     % % EEG constants
     params.fixHeader = 1;
@@ -20,7 +16,6 @@
     params.eegCorrect = 21;
     params.eegIncorrect = 22;
     params.eegNoResponse = 23;
-    params.eegResponse = 24;
     params.eegBlockStart = 101;
     params.eegBlockEnd = 102;
     params.eegCalibrateStart = 111;
@@ -40,10 +35,10 @@
     params.fontSize = 60;
     params.instructions = 'Focus on the square in the center for the whole time. \nPress j if you see the pattern and k if you do not. \nPress any key to continue.';
     params.percentNonTarget = 0.2;
-    params.numBlocks = 4;
-    params.numTrialsPerBlock = 36;
-    %params.numBlocks = 3;
-    %params.numTrialsPerBlock = 6;
+    %params.numBlocks = 4;
+    %params.numTrialsPerBlock = 36;
+    params.numBlocks = 3;
+    params.numTrialsPerBlock = 6;
 
     
     % TODO
@@ -80,10 +75,6 @@
     params.visualNumTrials = 36;
     params.visualPercentNonTarget = 0.2;
     params.visualContrast = 0.1;
-    
-    if basicLoad == true
-        return
-    end
     
     % user defined params:
     % -- task type

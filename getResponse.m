@@ -34,12 +34,18 @@ function [correct response] = getResponse(isTarget, keyYes, keyNo, timeLimit, la
                 keyIsDown = tmpKeyIsDown;
                 secs = tmpSecs;
                 keyCode = tmpKeyCode;
+                %if params.eeg
+                %    eegsignal(params.eegResponse);
+                %end
             end
         end
     else
         while GetSecs < timeLimit && keyIsDown == 0
             [keyIsDown, secs, keyCode] = KbCheck;
         end
+        %if keyIsDown ~= 0 && params.eeg ~= 0
+        %    eegsignal(params.eegResponse)
+        %end
     end
     
     % If no key press, wrong answer and no response

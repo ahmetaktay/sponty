@@ -82,13 +82,13 @@ function [history params]=spontyMain(history)
             params.nTrialsCheck = 4;
             [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
             %% Finer estimate
-            params.stairCaseChange = 0.00005;
-            params.nTrialsCheck = 6;
-            [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
-            % Finest estimate
-            params.stairCaseChange = 0.00001;
-            params.nTrialsCheck = 6;
-            [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
+            %params.stairCaseChange = 0.00005;
+            %params.nTrialsCheck = 6;
+            %[calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
+            %% Finest estimate
+            %params.stairCaseChange = 0.00001;
+            %params.nTrialsCheck = 6;
+            %[calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
             %% Done
             calibrationHistory.contrast = calibrationHistory.contrast(1:end-1);
             calContrasts = calibrationHistory.contrast(calibrationHistory.isTarget==1);
@@ -98,25 +98,19 @@ function [history params]=spontyMain(history)
                 eegsignal(params.dio, params.interSample, params.eegBlockStart);
             end
             
-            history.startBlockTimes = [];
-            history.startBlockTrials = [];
-            
             for ib=1:params.numBlocks
-                
-                history.startBlockTrials = [history.startBlockTrials nTrials];
-                history.startBlockTimes = [history.startBlockTimes GetSecs];
                 
                 if ib ~= 1
                     % Recalibrate baseline
                     calibrationHistory.contrast(end+1) = history.contrast(end);
-                    calibrationTrial = calibrationTrial + 1;
                     %% Tell EEG that this is a calibration
                     if params.eeg
                         eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
                     end
                     %% Finest estimate
-                    params.stairCaseChange = 0.00001;
-                    params.nTrialsCheck = 6;
+                    %params.stairCaseChange = 0.00001;
+                    params.stairCaseChange = 0.0001;
+%                    params.nTrialsCheck = 6;
                     params.nTrialsCheck = 4;
                     [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
                     %% Done
@@ -130,13 +124,13 @@ function [history params]=spontyMain(history)
                 end
                 
                 % Set targets
-                trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*.8)) repmat(0, 1, round(params.numTrialsPerBlock*.2))]);
+                Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*.8)) repmat(0, 1, round(params.numTrialsPerBlock*.2))])
                 
                 % Present trials
                 checkInterval = params.numTrialsPerBlock/2;
                 for ii=1:params.numTrialsPerBlock
                     % Present trial
-                    history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
+                    history = doTrialSponty(params, history, nTrials, params.percentNonTarget);
                     disp(history.isTarget);
                     
                     % Save information about whether got right or wrong
