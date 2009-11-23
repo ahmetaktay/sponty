@@ -109,7 +109,6 @@ function [history params]=spontyMain(history)
                 if ib ~= 1
                     % Recalibrate baseline
                     calibrationHistory.contrast(end+1) = history.contrast(end);
-                    calibrationTrial = calibrationTrial + 1;
                     %% Tell EEG that this is a calibration
                     if params.eeg
                         eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
