@@ -139,24 +139,47 @@ function [history params]=spontyMain(history)
                 for ii=1:params.numTrialsPerBlock
                     % Present trial
                     history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
-                    disp(history.isTarget);
                     
                     % Save information about whether got right or wrong
                     history = checkOneUpDown(params, history, nTrials, false);
                     % Check at certain intervals if need to adjust contrast
                     if mod(ii,checkInterval) == 0
-                        %%% get trials in the interval and see if when
-                        %%% target person is correct 40-60% of time
+                        %%% get trials in the interval
                         curCorrect = history.correct(end-floor(checkInterval)+1:end);
                         curIsTarget = history.isTarget(end-floor(checkInterval)+1:end);
                         checkTrials =  curCorrect(curIsTarget==1);
                         percentCorrect = mean(checkTrials);
                         history.isUp(nTrials) = 0;
                         history.isDown(nTrials) = 0;
-                        if percentCorrect > 0.6
-                            history.isDown(nTrials) = 1;
-                        elseif percentCorrect < 0.4
-                            history.isUp(nTrials) = 1;
+                        if percentCorrect > 0.7
+                           history.isDown(nTrials) = 1;
+                           if percentCorrect > 0.85
+                              params.stairCaseChange = 0.00002;
+                           else
+                              params.stairCaseChange = 0.00001;
+                           end
+                        elseif percentCorrect < 0.3
+                           history.isUp(nTrials) = 1;
+                           if percentCorrect < 0.15
+                              params.stairCaseChange = 0.00002;
+                           else
+                              params.stairCaseChange = 0.00001;
+                           end
+                        end
+                        if percentCorrect > 0.80
+                           
+                        elseif percentCorrect > 0.65
+                           params.stairCaseChange = 0.00001;
+                           
+                        elseif percentCorrect < 0.20
+                           par
+                        elseif percentCorrect < 0.35
+                           params.stairCaseChange = 0.00001;
+                           
+                        elseif percentCorrect > 0.80
+                           
+                        elseif percentCorrect < 0.2
+                           
                         end
                         history = changeThreshold(params, history, nTrials);
                     else
