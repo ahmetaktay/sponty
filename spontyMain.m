@@ -224,17 +224,17 @@ function [history params]=spontyMain(history)
             [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
             % Give break
-            blockBreak(params);
+            %blockBreak(params);
             
             % 1.3. Use smaller stair-case gap
             % -- stop when have 10 trials with 50% up+down
             % -- or stop if reach maximum number of trials
             % -- stair-case gap: 0.00005
             %%% parameters
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            params.stairCaseChange = 0.00005;
-            params.nTrialsCheck = 6;
-            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            %stairTrialStarts = [stairTrialStarts, nTrials];
+            %params.stairCaseChange = 0.00005;
+            %params.nTrialsCheck = 6;
+            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
             % Give break
             %blockBreak(params);
