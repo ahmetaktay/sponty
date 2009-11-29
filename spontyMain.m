@@ -70,7 +70,9 @@ function [history params]=spontyMain(history)
             
             % Set calibration specific values
             calibrationHistory = makeHistory(params, history.contrast(nTrials));
+            history.calibrationHistory.startTrials = [];
             calibrationTrial = 1;
+            calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
 
             % Recalibrate baseline
             %% Tell EEG that this is a calibration
@@ -100,7 +102,7 @@ function [history params]=spontyMain(history)
             
             history.startBlockTimes = [];
             history.startBlockTrials = [];
-            
+                        
             for ib=1:params.numBlocks
                 
                 history.startBlockTrials = [history.startBlockTrials nTrials];
@@ -113,6 +115,8 @@ function [history params]=spontyMain(history)
                     if params.eeg
                         eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
                     end
+                    %% Get trial number
+                    calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
                     %% Finest estimate
                     params.stairCaseChange = 0.00001;
                     params.nTrialsCheck = 6;
