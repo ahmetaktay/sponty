@@ -120,12 +120,11 @@ function [history params]=spontyMain(history)
                     %% Finest estimate
                     params.stairCaseChange = 0.00001;
                     params.nTrialsCheck = 6;
-                    params.nTrialsCheck = 4;
                     [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
                     %% Done
                     calibrationHistory.contrast = calibrationHistory.contrast(1:end-1);
                     calContrasts = calibrationHistory.contrast(calibrationHistory.isTarget==1);
-                    history.contrast(nTrials) = mean(calContrasts(end-4:end));
+                    history.contrast(nTrials) = mean(calContrasts(end-5:end));
                     if params.eeg
                         eegsignal(params.dio, params.interSample, params.eegCalibrateEnd);
                         eegsignal(params.dio, params.interSample, params.eegBlockStart);
@@ -279,6 +278,8 @@ function [history params]=spontyMain(history)
         %history.endTrial = history.endTrial - startStudyTime;
         
         history.endStudyTime = GetSecs;
+        history.studyDuration = (history.endStudyTime - history.startStudyTime)/60
+        history.contrast = history.contrast(1:end-1)
         
         % Save data (using save): 
         % File name includes the subject id and the time of the end of the
