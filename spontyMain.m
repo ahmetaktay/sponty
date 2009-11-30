@@ -72,7 +72,7 @@ function [history params]=spontyMain(history)
             calibrationHistory = makeHistory(params, history.contrast(nTrials));
             history.calibrationHistory.startTrials = [];
             calibrationTrial = 1;
-            calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
+            calibrationHistory.startTrials = [calibrationTrial];
 
             % Recalibrate baseline
             %% Tell EEG that this is a calibration
@@ -172,7 +172,7 @@ function [history params]=spontyMain(history)
                            params.stairCaseChange = 0.00001;
                            
                         elseif percentCorrect < 0.20
-                           par
+                           params.stairCaseChange = 0.00002;
                         elseif percentCorrect < 0.35
                            params.stairCaseChange = 0.00001;
                            
