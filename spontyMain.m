@@ -166,21 +166,6 @@ function [history params]=spontyMain(history)
                               params.stairCaseChange = 0.00001;
                            end
                         end
-                        if percentCorrect > 0.80
-                           
-                        elseif percentCorrect > 0.65
-                           params.stairCaseChange = 0.00001;
-                           
-                        elseif percentCorrect < 0.20
-                           params.stairCaseChange = 0.00002;
-                        elseif percentCorrect < 0.35
-                           params.stairCaseChange = 0.00001;
-                           
-                        elseif percentCorrect > 0.80
-                           
-                        elseif percentCorrect < 0.2
-                           
-                        end
                         history = changeThreshold(params, history, nTrials);
                     else
                         history.contrast = [history.contrast history.contrast(nTrials)];
