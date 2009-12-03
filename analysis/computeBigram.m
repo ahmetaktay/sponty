@@ -18,9 +18,9 @@ function probabilities=computeBigram(history)
         end
       else
         if correct(post)
-          cc = cc + 1;
+          ic = ic + 1;
         else
-          ci = ci + 1;
+          ii = ii + 1;
         end
       end
     end
