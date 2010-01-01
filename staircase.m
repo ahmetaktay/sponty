@@ -43,9 +43,9 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
     elseif strcmp(typeStaircase, 'Quest')
         
         % Set the number of trials to test
-        maxTrials = nTrials + params.maxTrials;
+        qTrials = nTrials + params.qTrials;
         
-        while nTrials < maxTrials
+        while nTrials < qTrials
             % Do trial
             history = doTrialSponty(params, history, nTrials, params.percentNonTarget);
             % Update Quest
