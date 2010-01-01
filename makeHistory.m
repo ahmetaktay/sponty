@@ -25,11 +25,13 @@ function history=makeHistory (params, startContrast, q)
     history.eegSignalEnd = [];
     
     % Quest settings
-    if nargin < 2
+    if nargin < 3
         tGuess = log10(params.startContrast);
         tGuessSd = params.startVariance;
         beta = 3.5; delta = 0.01; gamma = 0;
         history.q = QuestCreate(tGuess, tGuessSd, params.pThreshold, beta, delta, gamma);
         history.q.normalizePdf = 1;
+    else
+        history.q = q;
     end
     

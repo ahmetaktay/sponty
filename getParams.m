@@ -115,7 +115,7 @@
     elseif params.taskType == 2
         params.startFgContrast = 0;
     % If not practice or test than ask additional questions
-    elseif params.taskType == 3 || params.taskType == 4 || params.taskType == 5 || params.taskType == 6
+    elseif params.taskType == 3 || params.taskType == 4 || params.taskType == 5
         % -- subject id
         params.subjectID= input('What is the subject ID (input 0 to not save response data)? [0]: ');
         if isempty(params.subjectID)
@@ -133,9 +133,9 @@
         % Additional things for staircase
         if params.taskType == 3
             % -- starting contrast
-            params.startFgContrast = input(sprintf('What starting contrast do you want to use (note: max contrast is %s)? 0-1 [0.04]: ', params.maxContrast));
+            params.startFgContrast = input(sprintf('What starting contrast do you want to use (note: max contrast is %s)? 0-1 [0.02]: ', params.maxContrast));
             if isempty(params.startFgContrast)
-                params.startFgContrast = 0.04;
+                params.startFgContrast = 0.021;
             end
             params.fgContrast = params.startFgContrast;
         % Additional things for actual task
@@ -144,8 +144,6 @@
             params.startFgContrast = input('What contrast do you want to use? ');
         elseif params.taskType == 5
             params.startFgContrast = params.visualContrast;
-        elseif params.taskType == 6
-            params.startFgContrast = params.startContrast;
         end
     end
     

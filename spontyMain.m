@@ -18,8 +18,7 @@ function [history params]=spontyMain(q, history)
         % Initialize the struct where data will be recorded:
         if nargin < 1
             history = makeHistory(params, params.startFgContrast);
-        end
-        if nargin < 2
+        elseif nargin < 2
             history = makeHistory(params, params.startFgContrast, q);
         end
         
@@ -196,6 +195,7 @@ function [history params]=spontyMain(q, history)
         elseif params.taskType == 3
             %% Staircase
             stairTrialStarts = [];
+            nTrials = 1;
             
             % 1. Rough Estimate: 1-Up and 1-Down Strategy 
             
@@ -204,11 +204,10 @@ function [history params]=spontyMain(q, history)
             % -- or stop if reach maximum number of trials
             % -- stair-case gap: 0.01
             %%% parameters
-            nTrials = 1;
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            params.stairCaseChange = 0.01;
-            params.nTrialsCheck = 4;
-            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            %stairTrialStarts = [stairTrialStarts, nTrials];
+            %params.stairCaseChange = 0.01;
+            %params.nTrialsCheck = 4;
+            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
             % 1.1. Use medium stair-case gap
             % -- stop when have 10 trials with 50% up+down
@@ -236,25 +235,30 @@ function [history params]=spontyMain(q, history)
             % Give break
             blockBreak(params);
             
-            % 1.3. Use smaller stair-case gap
-            % -- stop when have 10 trials with 50% up+down
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.00005
-            %%% parameters
+            % 2. QUEST Algorithm
+            
+            %%% take starting contrast from qStartContrast
+            qStartContrast = mean(history.contrast((size(history.contrast,2)-6):end));
+            
+            %%% create new q struct
+            oldq = history.q;
+            history.q = QuestCreate(qStartContrast, oldq.tGuessSd, oldq.pThreshold, oldq.beta, oldq.delta, oldq.gamma);
+            
+            %%% if old q struct has items in it, then add to new q struct
+            if isempty(oldq.intensity) == 0
+                history.q = qUpdate(history.q, oldq.intensity, oldq.response);
+            end
+            
+            %%% add trials from one up and one down staircase
+            history.q = qUpdate(history.q, history.contrast(2:(end-1)), history.correct(2:end));
+            
+            %%% run 60 trials of quest
             stairTrialStarts = [stairTrialStarts, nTrials];
-            params.stairCaseChange = 0.00005;
-            params.nTrialsCheck = 6;
-            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            params.qTrials = 60;
+            history = staircase(params, history, nTrials, 'Quest');
             
             
-           
             history.stairTrialStarts = stairTrialStarts;
-
-            fprintf('Mean of last 20 trials: %1.7f\n', mean(history.contrast((size(history.contrast,2)-20):end)));
-            fprintf('Mean of last 10 trials: %1.7f\n', mean(history.contrast((size(history.contrast,2)-10):end)));
-            fprintf('Mean of last 5 trials: %1.7f\n', mean(history.contrast((size(history.contrast,2)-5):end)));
-            fprintf('Mean of last 2 trials: %1.7f\n', mean(history.contrast((size(history.contrast,2)-2):end)));
-            
         end
         
         % Go through history and set start and end trials relative to
