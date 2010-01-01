@@ -55,13 +55,16 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     Screen('DrawTexture', params.wPtr, params.fixation);
     
     % Wait
-    WaitSecs(params.ITI - (GetSecs - showTime) - elapsedTime + jitterITI);
+    interTrialInterval = params.ITI - (GetSecs - showTime) - elapsedTime + jitterITI;
+    history.interTrialInterval = [history.interTrialInterval interTrialInterval];
+    WaitSecs(interTrialInterval);
     
     % Deal with EEG
     if params.eeg
         putvalue(params.dio, eegCode);
         history.eegSignalStart = [history.eegSignalStart GetSecs];
-        %WaitSecs(params.interSample);
+        WaitSecs(params.interSample);
+        putvalue(params.dio, 0);
     end
     
     % Tell participant that stimulus coming
@@ -69,13 +72,12 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     sound(params.beep);
     history.startTrial = [history.startTrial startTrialTime];
     
-    % Deal with EEG
-    if params.eeg
-        putvalue(params.dio, 0);
-    end
-        
+    % Have some jittered interval between start of trial and stimulus presentation
+    jitterStart = (params.startJitterRange * rand()) * ((2 * round(rand)) - 1);
+    
     % Present stimulus
-    startStimulusTime = Screen('Flip', params.wPtr, startTrialTime + params.firstTone);
+    stimulusStartTime = startTrialTime + params.firstTone + params.startTime + jitterStart;
+    startStimulusTime = Screen('Flip', params.wPtr, stimulusStartTime);
     history.startStimulus = [history.startStimulus startStimulusTime-startTrialTime];
     
     % Put back only grey background + the fixation
@@ -87,9 +89,9 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     endStimulusTime = Screen('Flip', params.wPtr, startStimulusTime + params.stimulusDuration);
     history.stimulusDuration = [history.stimulusDuration endStimulusTime-startStimulusTime];
     %%% fix for when contrast is actually zero
-    %if params.fgContrast == 0
-    %    isTarget = 0;
-    %end
+    if params.fgContrast == 0
+        isTarget = 0;
+    end
     
     % Give second sound indicating response
 %    jitterSecondTone = (params.secondToneJitterRange * rand()) * ((2 * round(rand)) - 1);
@@ -99,12 +101,30 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
 %    end
 %    sound(params.beep);
     
+    % Show question mark to indicate that a response is needed
+    Screen('FillRect', params.wPtr, params.white*params.bgContrast);
+    %%% Save old text size
+    Screen(params.wPtr, 'TextFont', 'Arial');
+    oldTextSize = Screen('TextSize', params.wPtr, params.fontSize);
+    %%% Draw text centered on screen
+    DrawFormattedText(params.wPtr, WrapString('?', params.wrap), 'center', 'center');
+    %%% Display text
+    startResponseTime = Screen('Flip', params.wPtr, startTrialTime + params.endTime);
+    %%% Return textsize to normal
+    Screen('TextSize', params.wPtr, oldTextSize);
+    
     % Get Response
-    startResponseTime = GetSecs;
-    [thisCorrect thisResponseTime] = getResponse(isTarget, params.yesKey, params.noKey, GetSecs + params.responseTime, true);
+    [thisCorrect thisResponseTime] = getResponse(isTarget, params.yesKey, params.noKey, startResponseTime + params.responseTime, true);
+    endTrialTime = GetSecs;
     
     % End of Trial
-    history.endTrial = [history.endTrial GetSecs];
+    history.endTrial = [history.endTrial endTrialTime];
+    history.trialDuration = [history.trialDuration endTrialTime-startTrialTime];
+    
+    % Take away question mark and replace with fixation
+    Screen('FillRect', params.wPtr, params.white*params.bgContrast);
+    Screen('DrawTexture', params.wPtr, params.fixation);
+    Screen('Flip', params.wPtr, startTrialTime + params.endTime + params.responseTime);
     
     % Code Response (correct and rxn-time)
     history.correct = [history.correct thisCorrect];

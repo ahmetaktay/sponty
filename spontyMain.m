@@ -1,4 +1,4 @@
-function [history params]=spontyMain(history)
+function [history params]=spontyMain(q, history)
     
     % spontyMain.m 
     %
@@ -15,11 +15,14 @@ function [history params]=spontyMain(history)
         % Get the params of the experiment (this also opens the display):
         params = getParams;
         
-        % Initialize the struct where data will be recorded: 
+        % Initialize the struct where data will be recorded:
         if nargin < 1
-            history = makeHistory(params);
+            history = makeHistory(params, params.startFgContrast);
         end
-
+        if nargin < 2
+            history = makeHistory(params, params.startFgContrast, q);
+        end
+        
         % Instructions
         readyScreen(params, params.instructions, true, 1);
         
@@ -189,7 +192,7 @@ function [history params]=spontyMain(history)
                     blockBreak(params);
                 end
             end
-        % Staircase
+        % Staircase    
         elseif params.taskType == 3
             %% Staircase
             stairTrialStarts = [];
@@ -231,46 +234,20 @@ function [history params]=spontyMain(history)
             [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
             % Give break
-            %blockBreak(params);
+            blockBreak(params);
             
             % 1.3. Use smaller stair-case gap
             % -- stop when have 10 trials with 50% up+down
             % -- or stop if reach maximum number of trials
             % -- stair-case gap: 0.00005
             %%% parameters
-            %stairTrialStarts = [stairTrialStarts, nTrials];
-            %params.stairCaseChange = 0.00005;
-            %params.nTrialsCheck = 6;
-            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            params.stairCaseChange = 0.00005;
+            params.nTrialsCheck = 6;
+            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
-            % Give break
-            %blockBreak(params);
             
-            % 1.4. Use smaller stair-case gap
-            % -- stop when have 10 trials with 50% up+down
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.00001
-            %%% parameters
-            %stairTrialStarts = [stairTrialStarts, nTrials];
-            %params.stairCaseChange = 0.00001;
-            %params.nTrialsCheck = 6;
-            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
-
-            % Give break
-            %blockBreak(params);
-            
-            % 2. Finer Estimate: 2/3-Up and 2/3-Down Strategy
-
-            % 2.1. Use 1.2. stair-case level changes
-            % -- stop after 6 reversals
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.00002
-            %%% parameters
-            %stairTrialStarts = [stairTrialStarts, nTrials];
-            %params.nReversals = 6;
-            %params.stairCaseChange = 0.00001;
-            %history = staircase(params, history, nTrials, 'ThreeUpDown');
-            
+           
             history.stairTrialStarts = stairTrialStarts;
 
             fprintf('Mean of last 20 trials: %1.7f\n', mean(history.contrast((size(history.contrast,2)-20):end)));
@@ -286,8 +263,8 @@ function [history params]=spontyMain(history)
         %history.endTrial = history.endTrial - startStudyTime;
         
         history.endStudyTime = GetSecs;
-        history.studyDuration = (history.endStudyTime - history.startStudyTime)/60
-        history.contrast = history.contrast(1:end-1)
+        history.studyDuration = (history.endStudyTime - history.startStudyTime)/60;
+        history.contrast = history.contrast(1:end-1);
         
         % Save data (using save): 
         % File name includes the subject id and the time of the end of the

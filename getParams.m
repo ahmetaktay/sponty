@@ -20,7 +20,7 @@
     params.eegCorrect = 21;
     params.eegIncorrect = 22;
     params.eegNoResponse = 23;
-    params.eegResponse = 24;
+    %params.eegResponse = 24;
     params.eegBlockStart = 101;
     params.eegBlockEnd = 102;
     params.eegCalibrateStart = 111;
@@ -52,20 +52,30 @@
     % -- also want to set stimulus size properly
     
     % stimulus timing
-    params.ITI = 2; % seconds
-    params.ITIjitterRange = 0.5; % range in seconds
+    params.ITI = 1.5; % average number of seconds to wait till start of next trial
+    params.ITIjitterRange = 0.25; % range in seconds
     params.firstTone = 0.1; % seconds before stimulus onset that tone is presented
-    params.stimulusDuration = 0.25;  % seconds
-    params.secondTone = 0.15; % seconds after stimulus offset that tone is presented indicating response
-    params.secondToneJitterRange = 0.1;
+    params.startTime = 1.5;  % wait on average this many seconds before showing stimulus
+    params.startJitterRange = 0.5; % +/- number of seconds to jitter starting of stimulus
+    params.stimulusDuration = 0.015;  % seconds
+    params.endTime = 3; % number of seconds to wait from start of trial to end trial and ask participant their response
     params.responseTime = 2;  % seconds given to respond
     params.breakTime = 10; % minimum number of seconds between blocks as break
+    
+    if params.endTime < (params.firstTone + params.startTime + params.startJitterRange + params.stimulusDuration)
+       error('The end time for the trial is smaller than other elements of the trial combined!')
+    end
     
     % staircase settings
     params.stairCaseChange = 0.005;
     params.maxContrast = 0.3;
     params.minContrast = 0.0001;
     params.maxTrials = 60;
+    
+    % quest settings
+    params.startContrast = 0.018;
+    params.startVariance = 3;
+    params.pThreshold = 0.63;   % this should correspond to 1 up and 1 down or 50% threshold
     
     % other
     params.yesKey = 'j';
@@ -105,7 +115,7 @@
     elseif params.taskType == 2
         params.startFgContrast = 0;
     % If not practice or test than ask additional questions
-    elseif params.taskType == 3 || params.taskType == 4 || params.taskType == 5
+    elseif params.taskType == 3 || params.taskType == 4 || params.taskType == 5 || params.taskType == 6
         % -- subject id
         params.subjectID= input('What is the subject ID (input 0 to not save response data)? [0]: ');
         if isempty(params.subjectID)
@@ -134,6 +144,8 @@
             params.startFgContrast = input('What contrast do you want to use? ');
         elseif params.taskType == 5
             params.startFgContrast = params.visualContrast;
+        elseif params.taskType == 6
+            params.startFgContrast = params.startContrast;
         end
     end
     
