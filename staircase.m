@@ -42,8 +42,13 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
         end
     elseif strcmp(typeStaircase, 'Quest')
         
-        for nTrials=1:60
+        % Set the number of trials to test
+        maxTrials = nTrials + params.maxTrials;
+        
+        while nTrials < maxTrials
+            % Do trial
             history = doTrialSponty(params, history, nTrials, params.percentNonTarget);
+            % Update Quest
             if history.isTarget(nTrials)
                 history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
                 trialTheta = QuestQuantile(history.q);
@@ -51,6 +56,8 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
             else
                 history = changeThreshold(params, history, nTrials, history.contrast(nTrials));
             end
+            % Update number of trials
+            nTrials = nTrials + 1;
         end
         
     end
