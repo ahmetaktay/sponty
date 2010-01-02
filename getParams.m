@@ -76,6 +76,7 @@
     params.startContrast = 0.018;
     params.startVariance = 3;
     params.pThreshold = 0.63;   % this should correspond to 1 up and 1 down or 50% threshold
+    params.numRecalibrateTrials = 15;
     
     % other
     params.yesKey = 'j';

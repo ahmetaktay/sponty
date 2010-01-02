@@ -68,120 +68,91 @@ function [history params]=spontyMain(q, history)
             end
         % Actual Task
         elseif params.taskType == 4
-            nTrials = 1;
-            
-            % Set calibration specific values
-            calibrationHistory = makeHistory(params, history.contrast(nTrials));
-            history.calibrationHistory.startTrials = [];
-            calibrationTrial = 1;
-            calibrationHistory.startTrials = [calibrationTrial];
 
-            % Recalibrate baseline
-            %% Tell EEG that this is a calibration
-            if params.eeg
-                eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
-            end
-            %% Rough estimate
-            params.stairCaseChange = 0.0001;
-            params.nTrialsCheck = 4;
-            [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
-            %% Finer estimate
-            params.stairCaseChange = 0.00005;
-            params.nTrialsCheck = 6;
-            [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
-            % Finest estimate
-            params.stairCaseChange = 0.00001;
-            params.nTrialsCheck = 6;
-            [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
-            %% Done
-            calibrationHistory.contrast = calibrationHistory.contrast(1:end-1);
-            calContrasts = calibrationHistory.contrast(calibrationHistory.isTarget==1);
-            history.contrast(nTrials) = mean(calContrasts(end-4:end));
-            if params.eeg
-                eegsignal(params.dio, params.interSample, params.eegCalibrateEnd);
-                eegsignal(params.dio, params.interSample, params.eegBlockStart);
-            end
-            
+            nTrials = 1;
+
             history.startBlockTimes = [];
             history.startBlockTrials = [];
-                        
-            for ib=1:params.numBlocks
-                
+
+            % Set calibration specific values
+            calibrationHistory = makeHistory(params, history.contrast(nTrials), history.q);
+            calibrationTrial = 1;
+            history.calibrationHistory.startTrials = [];
+            calibrationHistory.startTrials = [calibrationTrial];
+
+            % Loop through blocks
+
+            for ib=1:params.numBlocks;
+
+                % Recalibrate 50% Threshold
+
+                %%% Tell EEG that this is a calibration
+                if params.eeg
+                    eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
+                end
+
+                if ib ~= 1
+                    % Set contrast
+                    calibrationHistory(end) = history.contrast(end);
+                    % Get trial number
+                    calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
+                    % Update quest struct
+                    calibrationHistory.q = history.q;
+                end
+
+                %%% Carry out QUEST
+                params.qTrials = params.numRecalibrateTrials;
+                [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest');
+
+                %%% Save quest struct
+                history.q = calibrationHistory.q;
+
+                %%% Tell EEG that done calibration
+                if params.eeg
+                    eegsignal(params.dio, params.interSample, params.eegCalibrateEnd);
+                end
+
+
+                % Run task block
+
+                %%% Set trials that are target and non-targets
+                trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
+
+                %%% Set contrast for block
+                blockContrast = QuestMean(history.q);
+                history.contrast(end) = blockContrast;
+
+                %%% Save info for start of block
                 history.startBlockTrials = [history.startBlockTrials nTrials];
                 history.startBlockTimes = [history.startBlockTimes GetSecs];
-                
-                if ib ~= 1
-                    % Recalibrate baseline
-                    calibrationHistory.contrast(end+1) = history.contrast(end);
-                    %% Tell EEG that this is a calibration
-                    if params.eeg
-                        eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
-                    end
-                    %% Get trial number
-                    calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
-                    %% Finest estimate
-                    params.stairCaseChange = 0.00001;
-                    params.nTrialsCheck = 6;
-                    [calibrationHistory,calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'OneUpDown');
-                    %% Done
-                    calibrationHistory.contrast = calibrationHistory.contrast(1:end-1);
-                    calContrasts = calibrationHistory.contrast(calibrationHistory.isTarget==1);
-                    history.contrast(nTrials) = mean(calContrasts(end-5:end));
-                    if params.eeg
-                        eegsignal(params.dio, params.interSample, params.eegCalibrateEnd);
-                        eegsignal(params.dio, params.interSample, params.eegBlockStart);
-                    end
+
+                %%% Tell EEG that block starting
+                if params.eeg
+                    eegsignal(params.dio, params.interSample, params.eegBlockStart);
                 end
-                
-                % Set targets
-                trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*.8)) repmat(0, 1, round(params.numTrialsPerBlock*.2))]);
-                
-                % Present trials
-                checkInterval = params.numTrialsPerBlock/2;
+
                 for ii=1:params.numTrialsPerBlock
-                    % Present trial
+                    % Present Trial
                     history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
-                    
-                    % Save information about whether got right or wrong
-                    history = checkOneUpDown(params, history, nTrials, false);
-                    % Check at certain intervals if need to adjust contrast
-                    if mod(ii,checkInterval) == 0
-                        %%% get trials in the interval
-                        curCorrect = history.correct(end-floor(checkInterval)+1:end);
-                        curIsTarget = history.isTarget(end-floor(checkInterval)+1:end);
-                        checkTrials =  curCorrect(curIsTarget==1);
-                        percentCorrect = mean(checkTrials);
-                        history.isUp(nTrials) = 0;
-                        history.isDown(nTrials) = 0;
-                        if percentCorrect > 0.7
-                           history.isDown(nTrials) = 1;
-                           if percentCorrect > 0.85
-                              params.stairCaseChange = 0.00002;
-                           else
-                              params.stairCaseChange = 0.00001;
-                           end
-                        elseif percentCorrect < 0.3
-                           history.isUp(nTrials) = 1;
-                           if percentCorrect < 0.15
-                              params.stairCaseChange = 0.00002;
-                           else
-                              params.stairCaseChange = 0.00001;
-                           end
-                        end
-                        history = changeThreshold(params, history, nTrials);
-                    else
-                        history.contrast = [history.contrast history.contrast(nTrials)];
-                    end
-                    
-                    % Set next trial num
+
+                    % Update Quest
+                    history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
+
+                    % Set contrast for next trial
+                    history.contrast = [history.contrast blockContrast];
+
+                    % Update number of trials
                     nTrials = nTrials + 1;
                 end
-                
-                % End block
+
+                %%% End block
                 if params.eeg
                     eegsignal(params.dio, params.interSample, params.eegBlockEnd);
                 end
-                
+
+
+                % What next?
+
                 if ib == params.numBlocks
                     % do you need to do something?, you are done!
                     % save calibration to history
@@ -191,6 +162,7 @@ function [history params]=spontyMain(q, history)
                     blockBreak(params);
                 end
             end
+
         % Staircase    
         elseif params.taskType == 3
             %% Staircase
