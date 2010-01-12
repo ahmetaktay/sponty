@@ -26,8 +26,12 @@ function probabilities=computeBigram(history)
     end
     pre = pre + 1;
   end
-  cc
-  ci
-  ic
-  ii
-  
+  ccmat = [cc, double(cc) / double(cc + ic)]
+  cimat = [ci, double(ci) / double(ci + ii)]
+  icmat = [ic, double(ic) / double(cc + ic)]
+  iimat = [ii, double(ii) / double(ci + ii)]
+  totalc = cc(1) + ic(1);
+  totali = ci(1) + ii(1);
+  total = totalc + totali;
+  totalc = [totalc, double(totalc) / double(total)]
+  totali = [totali, double(totali) / double(total)]

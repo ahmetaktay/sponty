@@ -73,7 +73,8 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     history.startTrial = [history.startTrial startTrialTime];
     
     % Have some jittered interval between start of trial and stimulus presentation
-    jitterStart = (params.startJitterRange * rand()) * ((2 * round(rand)) - 1);
+    % jitterStart = (params.startJitterRange * rand()) * ((2 * round(rand)) - 1);
+    jitterStart = Sample(params.startJitterSet);
     
     % Present stimulus
     stimulusStartTime = startTrialTime + params.firstTone + params.startTime + jitterStart;

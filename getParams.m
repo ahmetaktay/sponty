@@ -55,14 +55,15 @@
     params.ITI = 1.5; % average number of seconds to wait till start of next trial
     params.ITIjitterRange = 0.25; % range in seconds
     params.firstTone = 0.1; % seconds before stimulus onset that tone is presented
-    params.startTime = 1.5;  % wait on average this many seconds before showing stimulus
-    params.startJitterRange = 0.5; % +/- number of seconds to jitter starting of stimulus
-    params.stimulusDuration = 0.015;  % seconds
+    params.startTime = 1.0;  % wait on average this many seconds before showing stimulus
+    % params.startJitterRange = 0.5; % +/- number of seconds to jitter starting of stimulus
+    params.startJitterSet = [0.2 0.4 0.6 0.8 1.0]; % set of +/- number of seccond of jitter to pick randomly from
+    params.stimulusDuration = 0.007;  % seconds
     params.endTime = 3; % number of seconds to wait from start of trial to end trial and ask participant their response
     params.responseTime = 2;  % seconds given to respond
     params.breakTime = 10; % minimum number of seconds between blocks as break
     
-    if params.endTime < (params.firstTone + params.startTime + params.startJitterRange + params.stimulusDuration)
+    if params.endTime < (params.firstTone + params.startTime + max(params.startJitterSet) + params.stimulusDuration)
        error('The end time for the trial is smaller than other elements of the trial combined!')
     end
     
