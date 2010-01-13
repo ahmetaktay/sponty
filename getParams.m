@@ -61,7 +61,7 @@
     params.stimulusDuration = 0.007;  % seconds
     params.endTime = 3; % number of seconds to wait from start of trial to end trial and ask participant their response
     params.responseTime = 2;  % seconds given to respond
-    params.breakTime = 10; % minimum number of seconds between blocks as break
+    params.breakTime = 60; % minimum number of seconds between blocks as break
     
     if params.endTime < (params.firstTone + params.startTime + max(params.startJitterSet) + params.stimulusDuration)
        error('The end time for the trial is smaller than other elements of the trial combined!')
@@ -70,14 +70,14 @@
     % staircase settings
     params.stairCaseChange = 0.005;
     params.maxContrast = 0.3;
-    params.minContrast = 0.0001;
+    params.minContrast = 0.001;
     params.maxTrials = 60;
     
     % quest settings
-    params.startContrast = 0.018;
+    params.startContrast = 0.03;
     params.startVariance = 3;
     params.pThreshold = 0.63;   % this should correspond to 1 up and 1 down or 50% threshold
-    params.numRecalibrateTrials = 15;
+    params.numRecalibrateTrials = 12;
     
     % other
     params.yesKey = 'j';
@@ -135,9 +135,9 @@
         % Additional things for staircase
         if params.taskType == 3
             % -- starting contrast
-            params.startFgContrast = input(sprintf('What starting contrast do you want to use (note: max contrast is %s)? 0-1 [0.02]: ', params.maxContrast));
+            params.startFgContrast = input(sprintf('What starting contrast do you want to use (note: max contrast is %s)? 0-1 [0.03]: ', params.maxContrast));
             if isempty(params.startFgContrast)
-                params.startFgContrast = 0.021;
+                params.startFgContrast = 0.03;
             end
             params.fgContrast = params.startFgContrast;
         % Additional things for actual task

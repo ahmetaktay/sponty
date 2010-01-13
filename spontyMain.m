@@ -103,7 +103,13 @@ function [history params]=spontyMain(q, history)
                 %%% Carry out QUEST
                 params.qTrials = params.numRecalibrateTrials;
                 [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest');
-
+                
+                %%% Do another set if this is the first trial
+                if ib == 1
+                   blockBreak(params, round(params.breakTime/2));
+                   [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest');
+                end
+                
                 %%% Save quest struct
                 history.q = calibrationHistory.q;
 
@@ -119,7 +125,7 @@ function [history params]=spontyMain(q, history)
                 trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
 
                 %%% Set contrast for block
-                blockContrast = QuestMean(history.q);
+                blockContrast = QuestQuantile(history.q, 0.5);
                 history.contrast(end) = blockContrast;
 
                 %%% Save info for start of block
@@ -182,35 +188,35 @@ function [history params]=spontyMain(q, history)
             %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
             % 1.1. Use medium stair-case gap
-            % -- stop when have 10 trials with 50% up+down
+            % -- stop when have 8 trials with 50% up+down
             % -- or stop if reach maximum number of trials
             % -- stair-case gap: 0.001
             %%% parameters
             stairTrialStarts = [stairTrialStarts, nTrials];
             params.stairCaseChange = 0.001;
-            params.nTrialsCheck = 6;
+            params.nTrialsCheck = 8;
             [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
-            % Give break
-            blockBreak(params);
+            % Give break for 30 seconds
+            blockBreak(params, 30);
             
             % 1.2. Use smaller stair-case gap
             % -- stop when have 10 trials with 50% up+down
             % -- or stop if reach maximum number of trials
             % -- stair-case gap: 0.0001
             %%% parameters
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            params.stairCaseChange = 0.0001;
-            params.nTrialsCheck = 6;
-            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            %stairTrialStarts = [stairTrialStarts, nTrials];
+            %params.stairCaseChange = 0.0001;
+            %params.nTrialsCheck = 6;
+            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
             
-            % Give break
-            blockBreak(params);
+            % Give break for 30 seconds
+            %blockBreak(params, 30);
             
             % 2. QUEST Algorithm
             
             %%% take starting contrast from qStartContrast
-            qStartContrast = mean(history.contrast((size(history.contrast,2)-6):end));
+            qStartContrast = mean(history.contrast((end-7):end));
             
             %%% create new q struct
             oldq = history.q;
@@ -224,13 +230,47 @@ function [history params]=spontyMain(q, history)
             %%% add trials from one up and one down staircase
             history.q = qUpdate(history.q, history.contrast(2:(end-1)), history.correct(2:end));
             
-            %%% run 60 trials of quest
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            params.qTrials = 60;
-            history = staircase(params, history, nTrials, 'Quest');
+            %%% run 60 trials of quest (in 2 parts)
+            params.qTrials = 30;
             
+            % part 1
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest');
+            
+            % break for 30 secs
+            blockBreak(params, 30);
+            
+            % part 2
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest');
             
             history.stairTrialStarts = stairTrialStarts;
+            
+            %% Testing
+            
+            % break for 30 secs
+            blockBreak(params, 30);
+            
+            % setup contrast
+            blockContrast = 10^QuestQuantile(history.q, 0.5);
+            history.contrast(end) = blockContrast;
+            
+            % setup trials
+            trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
+            
+            for ii=1:params.numTrialsPerBlock
+                % Present Trial
+                history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
+
+                % Update Quest
+                history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
+
+                % Set contrast for next trial
+                history.contrast = [history.contrast blockContrast];
+
+                % Update number of trials
+                nTrials = nTrials + 1;
+            end
         end
         
         % Go through history and set start and end trials relative to

@@ -1,6 +1,10 @@
-function blockBreak(params)
+function blockBreak(params, breakTime)
+    if nargin < 2
+        breakTime = params.breakTime;
+    end
+    
     % Give break
-    readyScreen(params, 'Please Take A Break!', false, params.breakTime);
+    readyScreen(params, 'Please Take A Break!', false, breakTime);
     % Create a Ready screen
     readyScreen(params, 'Ready', true, 1);
     % Remind person to focus on fixation
