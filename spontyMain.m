@@ -7,7 +7,7 @@ function [history params]=spontyMain(q, history)
     % TODO: add note about where code is taken from
     
     % Start by removing anything you had left over in the memory:
-    clear all; close all;
+    close all;
     % Set DebugLevel to 3:
     Screen('Preference', 'VisualDebuglevel', 3);
     
@@ -90,25 +90,17 @@ function [history params]=spontyMain(q, history)
                 if params.eeg
                     eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
                 end
-
-                if ib ~= 1
-                    % Set contrast
-                    calibrationHistory(end) = history.contrast(end);
-                    % Get trial number
-                    calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
-                    % Update quest struct
-                    calibrationHistory.q = history.q;
+                
+                %%% Do an additional set if this is the first trial
+                if ib == 1
+                   params.qTrials = params.numRecalibrateTrials;
+                   [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
+                   blockBreak(params, round(params.breakTime/1.5));
                 end
 
                 %%% Carry out QUEST
-                params.qTrials = params.numRecalibrateTrials;
-                [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest');
-                
-                %%% Do another set if this is the first trial
-                if ib == 1
-                   blockBreak(params, round(params.breakTime/2));
-                   [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest');
-                end
+                params.qTrials = round(params.numRecalibrateTrials * 2/3);
+                [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
                 
                 %%% Save quest struct
                 history.q = calibrationHistory.q;
@@ -122,10 +114,12 @@ function [history params]=spontyMain(q, history)
                 % Run task block
 
                 %%% Set trials that are target and non-targets
-                trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
+                numTargets = round(params.numTrialsPerBlock*(1-params.percentNonTarget)) + 1;
+                numNonTargets = params.numTrialsPerBlock - numTargets;
+                trialTargets = Shuffle([repmat(1, 1, numTargets) repmat(0, 1, numNonTargets)]);
 
                 %%% Set contrast for block
-                blockContrast = QuestQuantile(history.q, 0.5);
+                blockContrast = 10^QuestQuantile(history.q, 0.5);
                 history.contrast(end) = blockContrast;
 
                 %%% Save info for start of block
@@ -164,6 +158,16 @@ function [history params]=spontyMain(q, history)
                     % save calibration to history
                     history.calibrations = calibrationHistory;
                 else
+                    % Set contrast
+                    calibrationHistory.contrast(end) = history.contrast(end);
+                    % Get trial number
+                    calibrationHistory.startTrials = [calibrationHistory.startTrials calibrationTrial];
+                    % Update quest struct
+                    calibrationHistory.q = history.q;
+                    % Do brief Quest
+                    params.qTrials = round(params.numRecalibrateTrials * 1/3);
+                    [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
+                    
                     % Give break
                     blockBreak(params);
                 end
@@ -235,42 +239,44 @@ function [history params]=spontyMain(q, history)
             
             % part 1
             stairTrialStarts = [stairTrialStarts, nTrials];
-            [history, nTrials] = staircase(params, history, nTrials, 'Quest');
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
             
             % break for 30 secs
             blockBreak(params, 30);
             
             % part 2
             stairTrialStarts = [stairTrialStarts, nTrials];
-            [history, nTrials] = staircase(params, history, nTrials, 'Quest');
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
             
             history.stairTrialStarts = stairTrialStarts;
             
-            %% Testing
+            % todo: add false alarm rate check!
             
-            % break for 30 secs
-            blockBreak(params, 30);
-            
-            % setup contrast
-            blockContrast = 10^QuestQuantile(history.q, 0.5);
-            history.contrast(end) = blockContrast;
-            
-            % setup trials
-            trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
-            
-            for ii=1:params.numTrialsPerBlock
-                % Present Trial
-                history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
-
-                % Update Quest
-                history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
-
-                % Set contrast for next trial
-                history.contrast = [history.contrast blockContrast];
-
-                % Update number of trials
-                nTrials = nTrials + 1;
-            end
+%            %% Testing
+%            
+%            % break for 30 secs
+%            blockBreak(params, 30);
+%            
+%            % setup contrast
+%            blockContrast = 10^QuestQuantile(history.q, 0.5);
+%            history.contrast(end) = blockContrast;
+%            
+%            % setup trials
+%            trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
+%            
+%            for ii=1:params.numTrialsPerBlock
+%                % Present Trial
+%                history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
+%
+%                % Update Quest
+%                history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
+%
+%                % Set contrast for next trial
+%                history.contrast = [history.contrast blockContrast];
+%
+%                % Update number of trials
+%                nTrials = nTrials + 1;
+%            end
         end
         
         % Go through history and set start and end trials relative to

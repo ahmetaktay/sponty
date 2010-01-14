@@ -40,7 +40,8 @@
     params.fontSize = 60;
     params.instructions = 'Focus on the square in the center for the whole time. \nPress j if you see the pattern and k if you do not. \nPress any key to continue.';
     params.percentNonTarget = 0.2;
-    params.numBlocks = 4;
+    %params.numBlocks = 4;
+    params.numBlocks = 2;
     params.numTrialsPerBlock = 36;
     %params.numBlocks = 3;
     %params.numTrialsPerBlock = 6;
@@ -77,7 +78,7 @@
     params.startContrast = 0.03;
     params.startVariance = 3;
     params.pThreshold = 0.63;   % this should correspond to 1 up and 1 down or 50% threshold
-    params.numRecalibrateTrials = 12;
+    params.numRecalibrateTrials = 18;
     
     % other
     params.yesKey = 'j';

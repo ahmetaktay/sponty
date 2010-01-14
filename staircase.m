@@ -1,4 +1,8 @@
-function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
+function [history,nTrials] = staircase(params, history, nTrials, typeStaircase, percentNonTarget)
+    
+    if nargin < 5
+        percentNonTarget = params.percentNonTarget;
+    end
     
     if strcmp(typeStaircase, 'OneUpDown')
         
@@ -10,7 +14,7 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
         maxTrials = nTrials + params.maxTrials;
         
         while nTrials < maxTrials
-            history = doTrialSponty(params, history, nTrials, params.percentNonTarget);
+            history = doTrialSponty(params, history, nTrials, percentNonTarget);
             history = checkOneUpDown(params, history, nTrials);
             if nTrials > startTrialCheck
                 trialsTarget = find(history.isTarget==1);
@@ -32,7 +36,7 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
         reversals = 0;
         
         while nTrials < maxTrials && reversals < nReversals
-            tmp = doTrialSponty(params, history, nTrials, params.percentNonTarget);
+            tmp = doTrialSponty(params, history, nTrials, percentNonTarget);
             if tmp.isTarget(nTrials) == 1
                 history = tmp;
                 history = checkThreeUpDown(params, history, nTrials);
@@ -47,7 +51,7 @@ function [history,nTrials] = staircase(params, history, nTrials, typeStaircase)
         
         while nTrials < qTrials
             % Do trial
-            history = doTrialSponty(params, history, nTrials, params.percentNonTarget);
+            history = doTrialSponty(params, history, nTrials, percentNonTarget);
             % Update Quest
             if history.isTarget(nTrials)
                 history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
