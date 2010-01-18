@@ -17,16 +17,21 @@ function [history params]=spontyMain(q, history)
         
         % Initialize the struct where data will be recorded:
         if nargin < 1
+            % If this is taskType=4 (i.e. the actual task) give error
+            if params.taskType == 4
+                error('Ending running of task due to missing Quest structure');
+            end
+            
             history = makeHistory(params, params.startFgContrast);
         elseif nargin < 2
             history = makeHistory(params, params.startFgContrast, q);
         end
         
+        % Create a Ready screen
+        readyScreen(params, 'Ready?', true, 1);
+        
         % Instructions
         readyScreen(params, params.instructions, true, 1);
-        
-        % Create a Ready screen
-        readyScreen(params);
 
         % Needed variables
         nTrials = 0; 
@@ -58,14 +63,85 @@ function [history params]=spontyMain(q, history)
                 nTrials = ii;
                 history = doTrialSponty(params, history, nTrials);
             end
-        % Simple visual task
-        elseif params.taskType == 5
-            history.contrast = repmat(params.startFgContrast, 1, params.visualNumTrials);
+        % Staircase    
+        elseif params.taskType == 3
+            %% Staircase
+            stairTrialStarts = [];
+            nTrials = 1;
             
-            for ii=1:params.visualNumTrials
-                nTrials = ii;
-                history = doTrialSponty(params, history, nTrials, params.visualPercentNonTarget);
+            % 1. Rough Estimate: 1-Up and 1-Down Strategy 
+            
+            % 1.0. Use large stair-case gap
+            % -- stop when have 4 trials with 50% up+down
+            % -- or stop if reach maximum number of trials
+            % -- stair-case gap: 0.01
+            %%% parameters
+            %stairTrialStarts = [stairTrialStarts, nTrials];
+            %params.stairCaseChange = 0.01;
+            %params.nTrialsCheck = 4;
+            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            
+            % 1.1. Use medium stair-case gap
+            % -- stop when have 8 trials with 50% up+down
+            % -- or stop if reach maximum number of trials
+            % -- stair-case gap: 0.001
+            %%% parameters
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            params.stairCaseChange = 0.001;
+            params.nTrialsCheck = 6;
+            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            
+            % Give break for 30 seconds
+            blockBreak(params, 30);
+            
+            % 1.2. Use smaller stair-case gap
+            % -- stop when have 10 trials with 50% up+down
+            % -- or stop if reach maximum number of trials
+            % -- stair-case gap: 0.0001
+            %%% parameters
+            %stairTrialStarts = [stairTrialStarts, nTrials];
+            %params.stairCaseChange = 0.0001;
+            %params.nTrialsCheck = 6;
+            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
+            
+            % Give break for 30 seconds
+            %blockBreak(params, 30);
+            
+            % 2. QUEST Algorithm
+            
+            %%% take starting contrast from qStartContrast
+            qStartContrast = mean(history.contrast((end-5):end));
+            
+            %%% create new q struct
+            oldq = history.q;
+            history.q = QuestCreate(qStartContrast, oldq.tGuessSd, oldq.pThreshold, oldq.beta, oldq.delta, oldq.gamma);
+            
+            %%% if old q struct has items in it, then add to new q struct
+            if isempty(oldq.intensity) == 0
+                history.q = qUpdate(history.q, oldq.intensity, oldq.response);
             end
+            
+            %%% add trials from one up and one down staircase
+            tmpTrials = find(history.isTarget==1 & history.response ~= 0);
+            history.q = qUpdate(history.q, history.contrast(tmpTrials), history.correct(tmpTrials));
+            
+            %%% run 60 trials of quest (in 2 parts)
+            params.qTrials = 30;
+            
+            % part 1
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
+            
+            % break for 30 secs
+            blockBreak(params, 30);
+            
+            % part 2
+            stairTrialStarts = [stairTrialStarts, nTrials];
+            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
+            
+            history.stairTrialStarts = stairTrialStarts;
+            
+            % todo: add false alarm rate check!
         % Actual Task
         elseif params.taskType == 4
 
@@ -77,15 +153,18 @@ function [history params]=spontyMain(q, history)
             % Set calibration specific values
             calibrationHistory = makeHistory(params, history.contrast(nTrials), history.q);
             calibrationTrial = 1;
-            history.calibrationHistory.startTrials = [];
+            history.calibrations.startTrials = [];
             calibrationHistory.startTrials = [calibrationTrial];
-
+            
+            history.recomputeContrastBlocks = [];
+            
             % Loop through blocks
-
             for ib=1:params.numBlocks;
-
+                
+                fprintf('Running block #%i\n', ib);
+                
                 % Recalibrate 50% Threshold
-
+                
                 %%% Tell EEG that this is a calibration
                 if params.eeg
                     eegsignal(params.dio, params.interSample, params.eegCalibrateStart)
@@ -97,9 +176,9 @@ function [history params]=spontyMain(q, history)
                    [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
                    blockBreak(params, round(params.breakTime/1.5));
                 end
-
+                
                 %%% Carry out QUEST
-                params.qTrials = round(params.numRecalibrateTrials * 2/3);
+                params.qTrials = round(params.numRecalibrateTrials * 2/3); 
                 [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
                 
                 %%% Save quest struct
@@ -120,27 +199,46 @@ function [history params]=spontyMain(q, history)
 
                 %%% Set contrast for block
                 blockContrast = 10^QuestQuantile(history.q, 0.5);
+                %blockContrast = 10^QuestMean(history.q);
                 history.contrast(end) = blockContrast;
+                fprintf('...setting block contrast to %f\n', blockContrast);
 
                 %%% Save info for start of block
-                history.startBlockTrials = [history.startBlockTrials nTrials];
+                startBlockTrial = nTrials;
+                history.startBlockTrials = [history.startBlockTrials startBlockTrial];
                 history.startBlockTimes = [history.startBlockTimes GetSecs];
 
                 %%% Tell EEG that block starting
                 if params.eeg
                     eegsignal(params.dio, params.interSample, params.eegBlockStart);
                 end
-
+                
+                numTrialsPerHalfBlock = round(params.numTrialsPerBlock/2);
                 for ii=1:params.numTrialsPerBlock
                     % Present Trial
                     history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
-
-                    % Update Quest
-                    history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
-
+                    
+                    % Update Quest (only if is target and got a response)
+                    if trialTargets(ii) == 1 && history.response(nTrials) ~= 0
+                        history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials)); 
+                    end
+                    
+                    % If this is half-way through the trial and we have at least 16 trials
+                    % then check that within percent correct of 30-70%
+                    if ii==numTrialsPerHalfBlock && ii>15
+                        percentCorrect = getMeanCorrect(history, startBlockTrial:nTrials);
+                        if percentCorrect < 0.3 || percentCorrect > 0.7
+                            % Recompute the contrast
+                            blockContrast = 10^QuestQuantile(history.q, 0.5);
+                            %blockContrast = 10^QuestMean(history.q);
+                            fprintf('...resetting contrast to %f\n', blockContrast);
+                            history.recomputeContrastBlocks = [history.recomputeContrastBlocks ib];
+                        end
+                    end
+                    
                     % Set contrast for next trial
                     history.contrast = [history.contrast blockContrast];
-
+                    
                     % Update number of trials
                     nTrials = nTrials + 1;
                 end
@@ -168,115 +266,35 @@ function [history params]=spontyMain(q, history)
                     params.qTrials = round(params.numRecalibrateTrials * 1/3);
                     [calibrationHistory, calibrationTrial] = staircase(params, calibrationHistory, calibrationTrial, 'Quest', params.percentNonTarget/2);
                     
-                    % Give break
-                    blockBreak(params);
+                    % Give break (add 10 secs onto each block after the first)
+                    breakTime = params.breakTime + (10 * (ib-1));
+                    blockBreak(params, breakTime);
+                    
+                    % Give special 'stay awake instructions' if more than
+                    % 1 false alarm note this will also count a
+                    % non-response as a false alarm
+                    tmpIsTarget = history.isTarget(startBlockTrial:nTrials);
+                    tmpCorrect = history.correct(startBlockTrial:nTrials);
+                    numFalseAlarms = sum(tmpCorrect(tmpIsTarget==0)==0);
+                    if numFalseAlarms > 1
+                        % Stay Awake!
+                        readyScreen(params, params.focusInstructions, false, 6);
+                        % Put up the fixation and wait 3 seconds
+                        Screen('DrawTexture', params.wPtr, params.fixation);
+                        Screen('Flip', params.wPtr);
+                        WaitSecs(4);
+                    end
                 end
             end
+        
+        % Simple visual task
+        elseif params.taskType == 5
+            history.contrast = repmat(params.startFgContrast, 1, params.visualNumTrials);
 
-        % Staircase    
-        elseif params.taskType == 3
-            %% Staircase
-            stairTrialStarts = [];
-            nTrials = 1;
-            
-            % 1. Rough Estimate: 1-Up and 1-Down Strategy 
-            
-            % 1.0. Use large stair-case gap
-            % -- stop when have 4 trials with 50% up+down
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.01
-            %%% parameters
-            %stairTrialStarts = [stairTrialStarts, nTrials];
-            %params.stairCaseChange = 0.01;
-            %params.nTrialsCheck = 4;
-            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
-            
-            % 1.1. Use medium stair-case gap
-            % -- stop when have 8 trials with 50% up+down
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.001
-            %%% parameters
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            params.stairCaseChange = 0.001;
-            params.nTrialsCheck = 8;
-            [history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
-            
-            % Give break for 30 seconds
-            blockBreak(params, 30);
-            
-            % 1.2. Use smaller stair-case gap
-            % -- stop when have 10 trials with 50% up+down
-            % -- or stop if reach maximum number of trials
-            % -- stair-case gap: 0.0001
-            %%% parameters
-            %stairTrialStarts = [stairTrialStarts, nTrials];
-            %params.stairCaseChange = 0.0001;
-            %params.nTrialsCheck = 6;
-            %[history,nTrials] = staircase(params, history, nTrials, 'OneUpDown');
-            
-            % Give break for 30 seconds
-            %blockBreak(params, 30);
-            
-            % 2. QUEST Algorithm
-            
-            %%% take starting contrast from qStartContrast
-            qStartContrast = mean(history.contrast((end-7):end));
-            
-            %%% create new q struct
-            oldq = history.q;
-            history.q = QuestCreate(qStartContrast, oldq.tGuessSd, oldq.pThreshold, oldq.beta, oldq.delta, oldq.gamma);
-            
-            %%% if old q struct has items in it, then add to new q struct
-            if isempty(oldq.intensity) == 0
-                history.q = qUpdate(history.q, oldq.intensity, oldq.response);
+            for ii=1:params.visualNumTrials
+                nTrials = ii;
+                history = doTrialSponty(params, history, nTrials, params.visualPercentNonTarget);
             end
-            
-            %%% add trials from one up and one down staircase
-            history.q = qUpdate(history.q, history.contrast(2:(end-1)), history.correct(2:end));
-            
-            %%% run 60 trials of quest (in 2 parts)
-            params.qTrials = 30;
-            
-            % part 1
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
-            
-            % break for 30 secs
-            blockBreak(params, 30);
-            
-            % part 2
-            stairTrialStarts = [stairTrialStarts, nTrials];
-            [history, nTrials] = staircase(params, history, nTrials, 'Quest', params.percentNonTarget/2);
-            
-            history.stairTrialStarts = stairTrialStarts;
-            
-            % todo: add false alarm rate check!
-            
-%            %% Testing
-%            
-%            % break for 30 secs
-%            blockBreak(params, 30);
-%            
-%            % setup contrast
-%            blockContrast = 10^QuestQuantile(history.q, 0.5);
-%            history.contrast(end) = blockContrast;
-%            
-%            % setup trials
-%            trialTargets = Shuffle([repmat(1, 1, round(params.numTrialsPerBlock*(1-params.percentNonTarget))) repmat(0, 1, round(params.numTrialsPerBlock*params.percentNonTarget))]);
-%            
-%            for ii=1:params.numTrialsPerBlock
-%                % Present Trial
-%                history = doTrialSponty(params, history, nTrials, params.percentNonTarget, trialTargets(ii));
-%
-%                % Update Quest
-%                history.q = QuestUpdate(history.q, log10(history.contrast(nTrials)), history.correct(nTrials));
-%
-%                % Set contrast for next trial
-%                history.contrast = [history.contrast blockContrast];
-%
-%                % Update number of trials
-%                nTrials = nTrials + 1;
-%            end
         end
         
         % Go through history and set start and end trials relative to
@@ -293,7 +311,7 @@ function [history params]=spontyMain(q, history)
         % experiment:
         if params.subjectID ~= 0
             now = fix(clock);
-            fileName = ['sponty', sprintf('%02i', params.subjectID), '-', num2str(params.sessionID), '_', num2str(now(2), '%02i'), '-', ...
+            fileName = ['data/sponty', sprintf('%02i', params.subjectID), '-', num2str(params.sessionID), '_', num2str(now(2), '%02i'), '-', ...
                 num2str(now(3), '%02i'), '-', num2str(now(1)), '_', ...
                 num2str(now(4), '%02i'), num2str(now(5), '%02i'), '_type', num2str(params.taskType, '%02i')];
             save(fileName, 'history', 'params');

@@ -44,16 +44,6 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     % current trial jitter in secs = ...
     %   (range of jittering in secs * random number 0-1) * (random -1 or 1)
     
-    % Prepare display stimulus if target and prepare eeg code
-    if isTarget==1
-        Screen('DrawTexture', params.wPtr, t);
-        eegCode = params.eegTarget;
-    else
-        eegCode = params.eegNoTarget;
-    end
-    % Prepare display of new fixation
-    Screen('DrawTexture', params.wPtr, params.fixation);
-    
     % Wait
     interTrialInterval = params.ITI - (GetSecs - showTime) - elapsedTime + jitterITI;
     history.interTrialInterval = [history.interTrialInterval interTrialInterval];
@@ -61,7 +51,7 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     
     % Deal with EEG
     if params.eeg
-        putvalue(params.dio, eegCode);
+        putvalue(params.dio, params.eegStartTrial);
         history.eegSignalStart = [history.eegSignalStart GetSecs];
         WaitSecs(params.interSample);
         putvalue(params.dio, 0);
@@ -76,6 +66,21 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     % jitterStart = (params.startJitterRange * rand()) * ((2 * round(rand)) - 1);
     jitterStart = Sample(params.startJitterSet);
     
+    % Prepare display stimulus if target and prepare eeg code
+    if isTarget==1
+        Screen('DrawTexture', params.wPtr, t);
+        eegCode = params.eegTarget;
+    else
+        eegCode = params.eegNoTarget;
+    end
+    % Prepare display of new fixation
+    Screen('DrawTexture', params.wPtr, params.fixation);
+    
+    % Deal with EEG
+    if params.eeg
+        putvalue(params.dio, eegCode);
+    end
+    
     % Present stimulus
     stimulusStartTime = startTrialTime + params.firstTone + params.startTime + jitterStart;
     startStimulusTime = Screen('Flip', params.wPtr, stimulusStartTime);
@@ -88,11 +93,17 @@ function history=doTrialSponty(params, history, nTrials, percentNoTarget, isTarg
     Screen('FillRect', params.wPtr, params.white*params.bgContrast);
     Screen('DrawTexture', params.wPtr, params.fixation);
     endStimulusTime = Screen('Flip', params.wPtr, startStimulusTime + params.stimulusDuration);
-    history.stimulusDuration = [history.stimulusDuration endStimulusTime-startStimulusTime];
     %%% fix for when contrast is actually zero
     if params.fgContrast == 0
         isTarget = 0;
     end
+    
+    % Deal with EEG
+    if params.eeg
+        putvalue(params.dio, 0);
+    end
+    
+    history.stimulusDuration = [history.stimulusDuration endStimulusTime-startStimulusTime];
     
     % Give second sound indicating response
 %    jitterSecondTone = (params.secondToneJitterRange * rand()) * ((2 * round(rand)) - 1);

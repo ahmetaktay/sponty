@@ -1,4 +1,4 @@
-    function params=getParams(basicLoad)
+function params=getParams(basicLoad)
     
     % function params=spontyParams
     % Creates parameters and initializes the display for visual perception experiment
@@ -15,12 +15,13 @@
     %% keys
     params.eegStart = 255;
     params.eegStop = 253;
-    params.eegTarget = 11;
-    params.eegNoTarget = 12;
-    params.eegCorrect = 21;
-    params.eegIncorrect = 22;
-    params.eegNoResponse = 23;
-    %params.eegResponse = 24;
+    params.eegStartTrial = 11;
+    params.eegTarget = 21;
+    params.eegNoTarget = 22;
+    params.eegCorrect = 31;
+    params.eegIncorrect = 32;
+    params.eegNoResponse = 33;
+    %params.eegResponse = 34;
     params.eegBlockStart = 101;
     params.eegBlockEnd = 102;
     params.eegCalibrateStart = 111;
@@ -39,9 +40,10 @@
     params.wrap = 30;
     params.fontSize = 60;
     params.instructions = 'Focus on the square in the center for the whole time. \nPress j if you see the pattern and k if you do not. \nPress any key to continue.';
+    params.extraInstructions = 'Focus on the center square and do not blink too much! \nEspecially after hearing the beep.';
+    params.focusInstructions = 'Try to stay awake! \nI know it is hard (sorry). \nYou can do it!';
     params.percentNonTarget = 0.2;
-    %params.numBlocks = 4;
-    params.numBlocks = 2;
+    params.numBlocks = 4;
     params.numTrialsPerBlock = 36;
     %params.numBlocks = 3;
     %params.numTrialsPerBlock = 6;
@@ -141,10 +143,28 @@
                 params.startFgContrast = 0.03;
             end
             params.fgContrast = params.startFgContrast;
+        
         % Additional things for actual task
         elseif params.taskType == 4
             % -- contrast to use
-            params.startFgContrast = input('What contrast do you want to use? ');
+            params.startFgContrast = input('What starting contrast do you want to use? [0.03]: ');
+            if isempty(params.startFgContrast)
+                params.startFgContrast = 0.03;
+            end
+            % -- number of blocks
+            numBlocks = input(sprintf('How many blocks are wanted? [%i]: ', params.numBlocks));
+            if ~isempty(numBlocks)
+                fprintf('Setting number of blocks to %i\n', numBlocks);
+               params.numBlocks = numBlocks; 
+            end
+            % -- set response keys (right or left handers?)
+            responseHand = input('Do you want to use the left-handed response keys (f and d)? 0=No, 1=Yes [0]: ');
+            if ~isempty(responseHand) && responseHand==1
+                fprintf('Setting response keys to f=yes and d=no\n');
+                params.yesKey = 'f';
+                params.noKey = 'd';
+            end
+        % Visual only task
         elseif params.taskType == 5
             params.startFgContrast = params.visualContrast;
         end
